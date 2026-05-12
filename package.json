@@ -1,5 +1,5 @@
 {
-  "name": "fingerprint-sdk",
+  "name": "@vivek_joshi_026/fingerprint-sdk",
   "version": "1.0.0",
   "description": "",
   "main": "./dist/index.js",
