@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Fingerprint SDK Demo (Tier 2)</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+        }
+        body { font-family: 'Inter', sans-serif; padding: 40px; background: var(--bg); color: var(--text); }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .visitor-id { font-size: 1.5em; font-weight: 800; color: var(--primary); letter-spacing: -0.025em; word-break: break-all; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat-item { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 1.8em; font-weight: bold; margin-bottom: 5px; }
+        .stat-label { font-size: 0.8em; opacity: 0.7; text-transform: uppercase; }
+        .bot-badge { padding: 5px 12px; border-radius: 9999px; font-size: 0.8em; font-weight: bold; }
+        .bot-false { background: #10b981; color: white; }
+        .bot-true { background: #ef4444; color: white; }
+        pre { background: #000; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 13px; color: #10b981; border: 1px solid #334155; }
+        h2 { margin-top: 0; font-size: 1.2em; opacity: 0.9; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        select, button { padding: 8px 16px; border-radius: 6px; background: #334155; color: white; border: 1px solid #475569; cursor: pointer; }
+        button:hover { background: #475569; }
+        .controls { display: flex; gap: 10px; align-items: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Fingerprint SDK <small style="opacity: 0.5; font-weight: normal;">v2.1 Enterprise</small></h1>
+            <div class="controls">
+                <select id="privacy-mode">
+                    <option value="minimal">Minimal Privacy</option>
+                    <option value="balanced" selected>Balanced Privacy</option>
+                    <option value="strict">Strict Privacy</option>
+                </select>
+                <button id="refresh-btn">Recalculate</button>
+                <div id="bot-status"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Visitor Identifier <small id="cached-badge" style="display: none; background: #6366f1; padding: 2px 8px; border-radius: 4px; font-size: 0.6em; margin-left: 10px;">CACHED</small></h2>
+            <div id="visitor-id" class="visitor-id">Analyzing device...</div>
+        </div>
+
+        <div class="stats card">
+            <div class="stat-item">
+                <div id="confidence" class="stat-value">--</div>
+                <div class="stat-label">Confidence Score</div>
+            </div>
+            <div class="stat-item">
+                <div id="entropy" class="stat-value">--</div>
+                <div class="stat-label">Total Entropy (bits)</div>
+            </div>
+            <div class="stat-item">
+                <div id="stability" class="stat-value">--</div>
+                <div class="stat-label">ID Stability</div>
+            </div>
+            <div class="stat-item">
+                <div id="p95-latency" class="stat-value">--</div>
+                <div class="stat-label">P95 Latency</div>
+            </div>
+            <div class="stat-item">
+                <div id="latency" class="stat-value">--</div>
+                <div class="stat-label">Total Time</div>
+            </div>
+
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Bot Detection Flags</h2>
+                <ul id="bot-flags" style="padding-left: 20px;"></ul>
+            </div>
+            <div class="card">
+                <h2>Environment Metadata</h2>
+                <div id="env-meta"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Active Collectors</h2>
+            <pre id="data-output">Collecting advanced signals...</pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import { FingerprintSDK } from '../dist/index.js';
+
+        async function run(mode = 'balanced', bypassCache = false) {
+            const sdk = new FingerprintSDK({ 
+                includeIP: true,
+                privacy: { mode: mode },
+                cache: { enabled: !bypassCache, ttl: 60000 }
+            });
+            
+            const result = await sdk.getFingerprint();
+            
+            document.getElementById('visitor-id').innerText = result.visitorId;
+            document.getElementById('confidence').innerText = result.confidence + '%';
+            document.getElementById('entropy').innerText = result.entropy.toFixed(1);
+            document.getElementById('stability').innerText = result.stability.toUpperCase();
+            document.getElementById('p95-latency').innerText = result.telemetry.p95Latency.toFixed(1) + 'ms';
+            document.getElementById('latency').innerText = result.metadata.collectionTime + 'ms';
+
+            
+            document.getElementById('cached-badge').style.display = result.metadata.cached ? 'inline' : 'none';
+
+            const botBadge = document.getElementById('bot-status');
+            botBadge.innerHTML = `<span class="bot-badge bot-${result.botDetection.isBot}">${result.botDetection.isBot ? 'BOT DETECTED' : 'HUMAN VERIFIED'}</span>`;
+
+            const flagsList = document.getElementById('bot-flags');
+            flagsList.innerHTML = '';
+            if (result.botDetection.flags.length === 0) {
+                flagsList.innerHTML = '<li>No suspicious flags found</li>';
+            } else {
+                result.botDetection.flags.forEach(f => {
+                    const li = document.createElement('li');
+                    li.innerText = f;
+                    flagsList.appendChild(li);
+                });
+            }
+
+            document.getElementById('env-meta').innerHTML = `
+                <p><b>Environment:</b> ${result.metadata.environment}</p>
+                <p><b>Privacy Mode:</b> ${mode}</p>
+                <p><b>Failed/Filtered:</b> ${result.metadata.failedCollectors.join(', ') || 'None'}</p>
+            `;
+
+            // Display active collectors (keys)
+            document.getElementById('data-output').innerText = JSON.stringify(Object.keys(result.components), null, 2);
+        }
+
+        document.getElementById('refresh-btn').onclick = () => {
+            const mode = document.getElementById('privacy-mode').value;
+            run(mode, true);
+        };
+
+        document.getElementById('privacy-mode').onchange = (e) => {
+            run(e.target.value, false);
+        };
+
+        run();
+    </script>
+</body>
+</html>

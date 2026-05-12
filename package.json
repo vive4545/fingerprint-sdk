@@ -1,0 +1,39 @@
+{
+  "name": "fingerprint-sdk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --exclude tests/e2e/** --exclude tests/performance/**",
+    "test:e2e": "playwright test",
+    "test:full": "npm run test && npm run test:e2e",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "fingerprint",
+    "browser-fingerprint",
+    "visitor-id",
+    "tracking"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "ua-parser-js": "^2.0.9"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.7.0",
+    "@types/ua-parser-js": "^0.7.39",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6"
+  }
+}
