@@ -1,5 +1,5 @@
 {
-  "name": "@vivek_joshi_026/fingerprint-sdk",
+  "name": "@vivejoshi/fingerprint-sdk",
   "version": "1.0.0",
   "description": "",
   "main": "./dist/index.js",
@@ -22,7 +22,7 @@
     "visitor-id",
     "tracking"
   ],
-  "author": "Antigravity",
+  "author": "Vivek Joshi",
   "license": "MIT",
   "type": "module",
   "dependencies": {
